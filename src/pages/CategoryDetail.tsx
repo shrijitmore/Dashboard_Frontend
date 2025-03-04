@@ -33,6 +33,9 @@ ChartJS.register(
   annotationPlugin
 );
 
+// Define a constant for the API base URL directly
+const API_BASE_URL = 'http://localhost:10000/api'; // Change this URL as needed
+
 export function CategoryDetail() {
   const { categoryName } = useParams<{ categoryName: string }>();
   const [data, setData] = useState<MonitoringData[]>([]);
@@ -188,7 +191,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchDepartmentCosts = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/aggregate-energy-costs');
+        const response = await fetch(`${API_BASE_URL}/aggregate-energy-costs`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -224,7 +227,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchAvgKWHData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/avgKWH');
+        const response = await fetch(`${API_BASE_URL}/avgKWH`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -374,7 +377,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchKWHPartsData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/KWHParts');
+        const response = await fetch(`${API_BASE_URL}/KWHParts`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -453,7 +456,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/ConsumptionMoltenMetal');
+        const response = await fetch(`${API_BASE_URL}/ConsumptionMoltenMetal`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -508,7 +511,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchTimeZoneData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/TimeZone');
+        const response = await fetch(`${API_BASE_URL}/TimeZone`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -563,7 +566,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchConsumptionData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/consumption');
+        const response = await fetch(`${API_BASE_URL}/consumption`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
