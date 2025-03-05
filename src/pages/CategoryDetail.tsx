@@ -37,6 +37,7 @@ ChartJS.register(
 // Define a constant for the API base URL directly
 const API_BASE_URL = 'https://dashboard-backend-8spg.onrender.com/api'; // Change this URL as needed
 
+
 export function CategoryDetail() {
   const { categoryName } = useParams<{ categoryName: string }>();
   const [data, setData] = useState<MonitoringData[]>([]);
@@ -174,7 +175,7 @@ export function CategoryDetail() {
   const [consumptionData, setConsumptionData] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<string>('2024-07-30');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('Melting');
-  const [selectedMetric, setSelectedMetric] = useState<'consumption' | 'F_F'>('consumption');
+  const [selectedMetric, setSelectedMetric] = useState<'consumption' | 'P_F'>('consumption');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -216,7 +217,7 @@ export function CategoryDetail() {
               '#FFD93D',
               '#95D03A',
               '#2ECC71',
-              '#0A2647'
+              '#a6d0ed'
             ],
             borderWidth: 0,
             cutout: '70%'
@@ -686,7 +687,7 @@ export function CategoryDetail() {
     0
   );
 
-  // Then define the options
+  // Update the pie chart options
   const options = {
     plugins: {
       legend: {
@@ -698,15 +699,44 @@ export function CategoryDetail() {
         }
       },
       tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: {
+          size: 14,
+          weight: 'bold'
+        },
+        bodyFont: {
+          size: 13
+        },
         callbacks: {
           label: (context: TooltipItem<'bar'>) => {
-            const value = context.raw;
-            return `₹ ${value.toLocaleString('en-IN', { 
-              maximumFractionDigits: 0 
-            })}`;
+            const value = context.raw as number;
+            const percentage = ((value / total) * 100).toFixed(1);
+            return [
+              `Amount: ₹${value.toLocaleString('en-IN')}`,
+              `Percentage: ${percentage}%`
+            ];
           }
         }
       }
+    },
+    animation: {
+      duration: 2000,
+      animateRotate: true,
+      animateScale: true
+    },
+    elements: {
+      arc: {
+        borderWidth: 0,
+        hoverBorderWidth: 3,
+        hoverBorderColor: '#ffffff',
+        hoverOffset: 15
+      }
+    },
+    hover: {
+      mode: 'nearest',
+      intersect: true
     }
   };
 
@@ -791,8 +821,8 @@ export function CategoryDetail() {
 
     const labels = Array.from({ length: 24 }, (_, i) => i.toString());
     const datasets = Object.entries(departmentData).map(([machineId, hourlyData]: [string, any]) => ({
-      label: `${machineId} ${selectedMetric === 'F_F' ? 'Power Factor' : 'Consumption'}`,
-      data: labels.map(hour => hourlyData[hour][selectedMetric]),
+      label: `${machineId} ${selectedMetric === 'P_F' ? 'Power Factor' : 'Consumption'}`,
+      data: labels.map(hour => hourlyData[hour]?.[selectedMetric] || null),
       borderColor: machineId === 'IF1' ? '#2196F3' : 
                   machineId === 'IF2' ? '#FF5722' : 
                   machineId === 'MM1' ? '#4CAF50' : '#FFC107',
@@ -807,6 +837,54 @@ export function CategoryDetail() {
       datasets,
     };
   };
+
+  const getChartOptions = () => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        min: selectedMetric === 'P_F' ? 0 : undefined,
+        max: selectedMetric === 'P_F' ? 1 : undefined, // Set max to 1 for power factor
+        title: {
+          display: true,
+          text: selectedMetric === 'P_F' ? 'Power Factor' : 'Consumption (kWh)',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        }
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Hours of the Day',
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        }
+      }
+    },
+    plugins: {
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          label: (context) => {
+            const value = context.raw;
+            if (selectedMetric === 'P_F') {
+              return `${context.dataset.label}: ${value?.toFixed(2)}`;
+            }
+            return `${context.dataset.label}: ${value} kWh`;
+          }
+        }
+      },
+      legend: {
+        position: 'top',
+      }
+    }
+  });
 
   // Add this helper function to check if a heading matches the search query
   const matchesSearch = (heading: string): boolean => {
@@ -1061,11 +1139,11 @@ export function CategoryDetail() {
                   </select>
                   <select
                     value={selectedMetric}
-                    onChange={(e) => setSelectedMetric(e.target.value as 'consumption' | 'F_F')}
+                    onChange={(e) => setSelectedMetric(e.target.value as 'consumption' | 'P_F')}
                     className="px-3 py-1.5 text-sm border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                   >
                     <option value="consumption">Power Consumption</option>
-                    <option value="F_F">Power Factor</option>
+                    <option value="P_F">Power Factor</option>
                   </select>
                 </div>
               </div>
@@ -1076,34 +1154,7 @@ export function CategoryDetail() {
                   consumptionData && (
                     <Line 
                       data={prepareChartData() || { labels: [], datasets: [] }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                          y: {
-                            beginAtZero: true,
-                            title: {
-                              display: true,
-                              text: selectedMetric === 'consumption' ? 'Consumption (kWh)' : 'Power Factor'
-                            }
-                          },
-                          x: {
-                            title: {
-                              display: true,
-                              text: 'Hours of the Day'
-                            }
-                          }
-                        },
-                        plugins: {
-                          tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                          },
-                          legend: {
-                            position: 'top',
-                          }
-                        }
-                      }}
+                      options={getChartOptions()}
                     />
                   )
                 )}
