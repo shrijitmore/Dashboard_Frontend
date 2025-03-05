@@ -19,6 +19,7 @@ import {
 import { loadData } from '../utils/dataLoader';
 import type { MonitoringData } from '../types';
 import { format, parseISO } from 'date-fns';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 ChartJS.register(
   CategoryScale,
@@ -40,6 +41,12 @@ export function CategoryDetail() {
   const { categoryName } = useParams<{ categoryName: string }>();
   const [data, setData] = useState<MonitoringData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDepartmentCostLoading, setIsDepartmentCostLoading] = useState(true);
+  const [isAvgKWHLoading, setIsAvgKWHLoading] = useState(true);
+  const [isKwhPartsLoading, setIsKwhPartsLoading] = useState(true);
+  const [isCombinedDataLoading, setIsCombinedDataLoading] = useState(true);
+  const [isMsebTimeZoneLoading, setIsMsebTimeZoneLoading] = useState(true);
+  const [isConsumptionLoading, setIsConsumptionLoading] = useState(true);
   const [msebCostData, setMsebCostData] = useState({
     labels: ['Peak Hours', 'Normal Hours', 'Off-Peak Hours'],
     datasets: [
@@ -191,6 +198,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchDepartmentCosts = async () => {
       try {
+        setIsDepartmentCostLoading(true);
         const response = await fetch(`${API_BASE_URL}/aggregate-energy-costs`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -217,6 +225,7 @@ export function CategoryDetail() {
       } catch (error) {
         console.error('Error fetching department costs:', error);
       } finally {
+        setIsDepartmentCostLoading(false);
         setIsLoading(false);
       }
     };
@@ -227,6 +236,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchAvgKWHData = async () => {
       try {
+        setIsAvgKWHLoading(true);
         const response = await fetch(`${API_BASE_URL}/avgKWH`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -367,6 +377,7 @@ export function CategoryDetail() {
       } catch (error) {
         console.error('Error fetching average KWH data:', error);
       } finally {
+        setIsAvgKWHLoading(false);
         setIsLoading(false);
       }
     };
@@ -377,6 +388,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchKWHPartsData = async () => {
       try {
+        setIsKwhPartsLoading(true);
         const response = await fetch(`${API_BASE_URL}/KWHParts`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -447,6 +459,9 @@ export function CategoryDetail() {
 
       } catch (error) {
         console.error('Error fetching KWH parts data:', error);
+      } finally {
+        setIsKwhPartsLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -456,6 +471,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchCombinedData = async () => {
       try {
+        setIsCombinedDataLoading(true);
         const response = await fetch(`${API_BASE_URL}/ConsumptionMoltenMetal`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -502,6 +518,9 @@ export function CategoryDetail() {
         });
       } catch (error) {
         console.error('Error fetching combined data:', error);
+      } finally {
+        setIsCombinedDataLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -511,6 +530,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchTimeZoneData = async () => {
       try {
+        setIsMsebTimeZoneLoading(true);
         const response = await fetch(`${API_BASE_URL}/TimeZone`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -557,6 +577,9 @@ export function CategoryDetail() {
         });
       } catch (error) {
         console.error('Error fetching time zone data:', error);
+      } finally {
+        setIsMsebTimeZoneLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -566,6 +589,7 @@ export function CategoryDetail() {
   useEffect(() => {
     const fetchConsumptionData = async () => {
       try {
+        setIsConsumptionLoading(true);
         const response = await fetch(`${API_BASE_URL}/consumption`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -574,6 +598,9 @@ export function CategoryDetail() {
         setConsumptionData(result.aggregatedData);
       } catch (error) {
         console.error('Error fetching consumption data:', error);
+      } finally {
+        setIsConsumptionLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -834,10 +861,8 @@ export function CategoryDetail() {
                 Cost of Energy by Department
               </h2>
               <div className="relative h-[300px] sm:h-[400px] lg:h-64">
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <span>Loading...</span>
-                  </div>
+                {isDepartmentCostLoading ? (
+                  <LoadingSpinner />
                 ) : (
                   <Pie data={departmentCostData} options={options} />
                 )}
@@ -878,10 +903,8 @@ export function CategoryDetail() {
                 </div>
               </div>
               <div className="h-[300px] sm:h-[400px] lg:h-64 overflow-auto scrollbar-hidden">
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <span>Loading...</span>
-                  </div>
+                {isAvgKWHLoading ? (
+                  <LoadingSpinner />
                 ) : (
                   <div style={{ minWidth: '464px', height: '232px' }}>
                     <Line data={avgKWHData} options={avgKWHChartOptions} />
@@ -910,7 +933,11 @@ export function CategoryDetail() {
                 </select>
               </div>
               <div className="h-[300px] sm:h-[400px] lg:h-64">
-                <Line data={kwhTrendData} options={kwhChartOptions} />
+                {isKwhPartsLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <Line data={kwhTrendData} options={kwhChartOptions} />
+                )}
               </div>
             </div>
           )}
@@ -924,7 +951,11 @@ export function CategoryDetail() {
                 </h2>
               </div>
               <div className="h-[300px] sm:h-[400px] lg:h-64">
-                <Line data={combinedData} options={baseChartOptions} />
+                {isCombinedDataLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <Line data={combinedData} options={baseChartOptions} />
+                )}
               </div>
             </div>
           )}
@@ -938,55 +969,59 @@ export function CategoryDetail() {
                 </h2>
               </div>
               <div className="h-[300px] sm:h-[400px] lg:h-64">
-                <Bar 
-                  data={msebTimeZoneData} 
-                  options={{
-                    ...msebChartOptions,
-                    scales: {
-                      ...msebChartOptions.scales,
-                      y: {
-                        ...msebChartOptions.scales.y,
-                        ticks: {
-                          callback: function(value) {
-                            return `${(value / 1000).toFixed(0)}K`; // Format Y-axis values in K
+                {isMsebTimeZoneLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <Bar 
+                    data={msebTimeZoneData} 
+                    options={{
+                      ...msebChartOptions,
+                      scales: {
+                        ...msebChartOptions.scales,
+                        y: {
+                          ...msebChartOptions.scales.y,
+                          ticks: {
+                            callback: function(value) {
+                              return `${(value / 1000).toFixed(0)}K`; // Format Y-axis values in K
+                            },
                           },
                         },
-                      },
-                      x: {
-                        ...msebChartOptions.scales.x,
-                        ticks: {
-                          callback: function(value) {
-                            const label = this.getLabelForValue(value);
-                            if (label) {
-                              const date = format(parseISO(label), 'dd MMM yy'); // Format date
-                              const dateParts = date.split(' '); // Split into parts
-                              return `${dateParts[0]}\n${dateParts[1]}\n${dateParts[2]}`; // Return formatted string for vertical display
+                        x: {
+                          ...msebChartOptions.scales.x,
+                          ticks: {
+                            callback: function(value) {
+                              const label = this.getLabelForValue(value);
+                              if (label) {
+                                const date = format(parseISO(label), 'dd MMM yy'); // Format date
+                                const dateParts = date.split(' '); // Split into parts
+                                return `${dateParts[0]}\n${dateParts[1]}\n${dateParts[2]}`; // Return formatted string for vertical display
+                              }
+                              return '';
+                            },
+                            padding: 5, // Reduced padding for better spacing
+                            font: {
+                              size: 10, // Smaller font size for better clarity
+                              family: 'Arial', // Set font family
+                              weight: 'normal', // Normal weight for less emphasis
+                            },
+                          },
+                          title: {
+                            display: true,
+                            text: 'Date',
+                            padding: {
+                              top: 10,
+                              bottom: 10
+                            },
+                            font: {
+                              size: 12, // Slightly smaller title font size
+                              weight: 'bold', // Keep title bold for emphasis
                             }
-                            return '';
-                          },
-                          padding: 5, // Reduced padding for better spacing
-                          font: {
-                            size: 10, // Smaller font size for better clarity
-                            family: 'Arial', // Set font family
-                            weight: 'normal', // Normal weight for less emphasis
-                          },
-                        },
-                        title: {
-                          display: true,
-                          text: 'Date',
-                          padding: {
-                            top: 10,
-                            bottom: 10
-                          },
-                          font: {
-                            size: 12, // Slightly smaller title font size
-                            weight: 'bold', // Keep title bold for emphasis
                           }
                         }
                       }
-                    }
-                  }}
-                />
+                    }}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1035,37 +1070,43 @@ export function CategoryDetail() {
                 </div>
               </div>
               <div className="h-[400px]">
-                {consumptionData && <Line 
-                  data={prepareChartData() || { labels: [], datasets: [] }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                      y: {
-                        beginAtZero: true,
-                        title: {
-                          display: true,
-                          text: selectedMetric === 'consumption' ? 'Consumption (kWh)' : 'Power Factor'
+                {isConsumptionLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  consumptionData && (
+                    <Line 
+                      data={prepareChartData() || { labels: [], datasets: [] }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            title: {
+                              display: true,
+                              text: selectedMetric === 'consumption' ? 'Consumption (kWh)' : 'Power Factor'
+                            }
+                          },
+                          x: {
+                            title: {
+                              display: true,
+                              text: 'Hours of the Day'
+                            }
+                          }
+                        },
+                        plugins: {
+                          tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                          },
+                          legend: {
+                            position: 'top',
+                          }
                         }
-                      },
-                      x: {
-                        title: {
-                          display: true,
-                          text: 'Hours of the Day'
-                        }
-                      }
-                    },
-                    plugins: {
-                      tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                      },
-                      legend: {
-                        position: 'top',
-                      }
-                    }
-                  }}
-                />}
+                      }}
+                    />
+                  )
+                )}
               </div>
             </div>
           )}
