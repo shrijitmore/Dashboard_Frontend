@@ -1107,17 +1107,16 @@ export function CategoryDetail() {
           {/* Daily Consumption Trend */}
           {matchesSearch('Daily Consumption Trend') && (
             <div className="col-span-full bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                 <h2 className="text-base font-medium text-gray-900 dark:text-white">
                   Daily Consumption Trend
                 </h2>
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
                   <input
                     type="date"
                     value={selectedDay}
                     onChange={(e) => {
                       const newDate = e.target.value;
-                      // Only update if the date exists in the consumption data
                       if (consumptionData?.some(day => day.Date === newDate)) {
                         setSelectedDay(newDate);
                       }
@@ -1126,12 +1125,13 @@ export function CategoryDetail() {
                     max={consumptionData?.[consumptionData.length - 1]?.Date}
                     className="px-3 py-1.5 text-sm border rounded-md bg-white dark:bg-gray-800 
                              dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 
-                             focus:border-transparent"
+                             focus:border-transparent w-full sm:w-auto"
                   />
                   <select
                     value={selectedDepartment}
                     onChange={(e) => setSelectedDepartment(e.target.value)}
-                    className="px-3 py-1.5 text-sm border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                    className="px-3 py-1.5 text-sm border rounded-md bg-white dark:bg-gray-800 
+                             dark:border-gray-600 dark:text-white w-full sm:w-auto"
                   >
                     {consumptionData && Object.keys(consumptionData[0].Departments).map((dept) => (
                       <option key={dept} value={dept}>{dept}</option>
@@ -1140,21 +1140,41 @@ export function CategoryDetail() {
                   <select
                     value={selectedMetric}
                     onChange={(e) => setSelectedMetric(e.target.value as 'consumption' | 'P_F')}
-                    className="px-3 py-1.5 text-sm border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                    className="px-3 py-1.5 text-sm border rounded-md bg-white dark:bg-gray-800 
+                             dark:border-gray-600 dark:text-white w-full sm:w-auto"
                   >
                     <option value="consumption">Power Consumption</option>
                     <option value="P_F">Power Factor</option>
                   </select>
                 </div>
               </div>
-              <div className="h-[400px]">
+              <div className="h-[300px] sm:h-[400px] overflow-x-auto">
                 {isConsumptionLoading ? (
                   <LoadingSpinner />
                 ) : (
                   consumptionData && (
                     <Line 
                       data={prepareChartData() || { labels: [], datasets: [] }}
-                      options={getChartOptions()}
+                      options={{
+                        ...getChartOptions(),
+                        maintainAspectRatio: false,
+                        scales: {
+                          ...getChartOptions().scales,
+                          x: {
+                            ...getChartOptions().scales.x,
+                            ticks: {
+                              maxRotation: 45,
+                              minRotation: 45,
+                              font: {
+                                size: 10,
+                              },
+                              callback: function(value) {
+                                return `${value}:00`;  // Display hours in 24-hour format
+                              }
+                            }
+                          }
+                        }
+                      }}
                     />
                   )
                 )}
