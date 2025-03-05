@@ -34,7 +34,7 @@ ChartJS.register(
 );
 
 // Define a constant for the API base URL directly
-const API_BASE_URL = 'http://44.226.145.213/api'; // Change this URL as needed
+const API_BASE_URL = 'https://dashboard-backend-8spg.onrender.com'; // Change this URL as needed
 
 export function CategoryDetail() {
   const { categoryName } = useParams<{ categoryName: string }>();
