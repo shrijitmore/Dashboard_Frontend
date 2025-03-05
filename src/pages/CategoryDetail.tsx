@@ -1010,11 +1010,13 @@ export function CategoryDetail() {
                   ))}
                 </select>
               </div>
-              <div className="h-[300px] sm:h-[400px] lg:h-64">
+              <div className="h-[300px] sm:h-[400px] lg:h-64 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {isKwhPartsLoading ? (
                   <LoadingSpinner />
                 ) : (
-                  <Line data={kwhTrendData} options={kwhChartOptions} />
+                  <div style={{ minWidth: '464px', height: '100%' }}>
+                    <Line data={kwhTrendData} options={kwhChartOptions} />
+                  </div>
                 )}
               </div>
             </div>
