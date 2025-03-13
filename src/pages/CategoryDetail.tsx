@@ -940,7 +940,7 @@ export function CategoryDetail() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div className="px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start justify-between">
             <div className="flex items-center gap-3">
               <Link
                 to="/"
@@ -954,26 +954,26 @@ export function CategoryDetail() {
             </div>
             
             {/* Search Bar */}
-            <div className="relative max-w-md w-full ml-4">
+            <div className="relative w-full mt-4 sm:mt-0 sm:w-auto">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search headings..."
-                    className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-800 
+                    className="w-full pl-10 pr-4 py-3 border border-blue-500 rounded-lg bg-blue-50 dark:bg-gray-800 
                             text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
-                            border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 
-                            focus:ring-blue-500 focus:border-transparent"
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-md"
+                    style={{ minWidth: '300px' }} // Ensure a minimum width for better visibility
                   />
                 </div>
                 <button
                   onClick={handleGenerate}
                   disabled={!searchQuery || isGenerating}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 
-                           disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                           disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md"
                 >
                   {isGenerating ? 'Generating...' : 'Generate'}
                 </button>
@@ -1015,7 +1015,7 @@ export function CategoryDetail() {
             </div>
           )}
 
-          {/* Average KWH/Tonne Trend */}
+          {/* Search Graph */}
           {matchesSearch('Average KWH/Tonne Trend') && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
               <div className="flex items-center justify-between mb-4">
@@ -1034,7 +1034,7 @@ export function CategoryDetail() {
                   </select>
                 </div>
               </div>
-              <div className="h-[300px] sm:h-[400px] lg:h-64 overflow-auto scrollbar-hidden">
+              <div className="h-[300px] sm:h-[400px] lg:h-64 overflow-x-auto scrollbar-hidden">
                 {isAvgKWHLoading ? (
                   <LoadingSpinner />
                 ) : (
@@ -1260,7 +1260,7 @@ export function CategoryDetail() {
           {isGenerating ? (
             <LoadingSpinner />
           ) : generatedData ? (
-            <div className="h-[500px]">
+            <div className="h-[500px] overflow-x-auto">
               <Line
                 ref={chartRef}
                 data={{
@@ -1302,7 +1302,11 @@ export function CategoryDetail() {
                 }}
               />
             </div>
-          ) : null}
+          ) : (
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              No relevant data available.
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-4 sm:p-6">
