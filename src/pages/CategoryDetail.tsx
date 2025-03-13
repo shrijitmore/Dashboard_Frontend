@@ -909,7 +909,7 @@ export function CategoryDetail() {
     setShowGeneratedGraph(true);
     
     try {
-      const response = await fetch('http://localhost:5000/api/chat-response', {
+      const response = await fetch(`${API_BASE_URL}/chat-response`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
