@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { useParams, Link } from 'react-router-dom';
 import { Line, Bar, Pie } from 'react-chartjs-2';
@@ -156,9 +156,12 @@ export function CategoryDetail() {
           callback: function(value) {
             const label = this.getLabelForValue(value);
             if (label) {
-              const currentDate = format(parseISO(label), 'dd');
-              const currentMonth = format(parseISO(label), 'MMM');
-              return `${currentDate}\n${currentMonth}`;
+              const parsedDate = parseISO(label);
+              if (!isNaN(parsedDate.getTime())) {
+                const currentDate = format(parsedDate, 'dd');
+                const currentMonth = format(parsedDate, 'MMM');
+                return `${currentDate}\n${currentMonth}`;
+              }
             }
             return '';
           }
@@ -177,6 +180,10 @@ export function CategoryDetail() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('Melting');
   const [selectedMetric, setSelectedMetric] = useState<'consumption' | 'P_F'>('consumption');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showGeneratedGraph, setShowGeneratedGraph] = useState(false);
+  const [generatedData, setGeneratedData] = useState<any>(null);
+  const chartRef = useRef(null); // Create a ref for the chart
 
   useEffect(() => {
     const fetchData = async () => {
@@ -660,9 +667,12 @@ export function CategoryDetail() {
           callback: function(value) {
             const label = this.getLabelForValue(value);
             if (label) {
-              const currentDate = format(parseISO(label), 'dd');
-              const currentMonth = format(parseISO(label), 'MMM');
-              return `${currentDate}\n${currentMonth}`;
+              const parsedDate = parseISO(label);
+              if (!isNaN(parsedDate.getTime())) {
+                const currentDate = format(parsedDate, 'dd');
+                const currentMonth = format(parsedDate, 'MMM');
+                return `${currentDate}\n${currentMonth}`;
+              }
             }
             return '';
           }
@@ -886,10 +896,44 @@ export function CategoryDetail() {
     }
   });
 
-  // Add this helper function to check if a heading matches the search query
+  // Function to check if a heading matches the search query
   const matchesSearch = (heading: string): boolean => {
     return heading.toLowerCase().includes(searchQuery.toLowerCase());
   };
+
+  // Function to handle the generation of the graph based on the search query
+  const handleGenerate = async () => {
+    if (!searchQuery) return;
+    
+    setIsGenerating(true);
+    setShowGeneratedGraph(true);
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/chat-response', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: searchQuery }),
+      });
+      
+      const data = await response.json();
+      setGeneratedData(data);
+    } catch (error) {
+      console.error('Error generating response:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  useEffect(() => {
+    // Cleanup function to destroy the chart instance
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -911,18 +955,28 @@ export function CategoryDetail() {
             
             {/* Search Bar */}
             <div className="relative max-w-md w-full ml-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search headings..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-800 
-                           text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
-                           border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 
-                           focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search headings..."
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-800 
+                            text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
+                            border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 
+                            focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={handleGenerate}
+                  disabled={!searchQuery || isGenerating}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 
+                           disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {isGenerating ? 'Generating...' : 'Generate'}
+                </button>
               </div>
             </div>
           </div>
@@ -1185,6 +1239,76 @@ export function CategoryDetail() {
           )}
         </div>
       </div>
+
+      {/* Conditional rendering for generated graph */}
+      {showGeneratedGraph ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-medium text-gray-900 dark:text-white">
+              Generated Graph
+            </h2>
+            <button
+              onClick={() => {
+                setShowGeneratedGraph(false);
+                setSearchQuery(''); // Reset search query when going back
+              }}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              Back to All Graphs
+            </button>
+          </div>
+          {isGenerating ? (
+            <LoadingSpinner />
+          ) : generatedData ? (
+            <div className="h-[500px]">
+              <Line
+                ref={chartRef}
+                data={{
+                  labels: Array.isArray(generatedData.plotData)
+                    ? generatedData.plotData.map((item: any) => format(parseISO(item.date), 'dd MMM yy'))
+                    : [format(parseISO(generatedData.plotData.date), 'dd MMM yy')],
+                  datasets: [
+                    {
+                      label: 'Consumption',
+                      data: Array.isArray(generatedData.plotData)
+                        ? generatedData.plotData.map((item: any) => item.sum_of_consumtion)
+                        : [generatedData.plotData.sum_of_consumtion],
+                      borderColor: '#2196F3',
+                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                      tension: 0.4,
+                    },
+                    {
+                      label: 'Molten Metal',
+                      data: Array.isArray(generatedData.plotData)
+                        ? generatedData.plotData.map((item: any) => item.sum_of_moltenmetal)
+                        : [generatedData.plotData.sum_of_moltenmetal],
+                      borderColor: '#FF9800',
+                      backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                      tension: 0.4,
+                    }
+                  ]
+                }}
+                options={{
+                  ...baseChartOptions,
+                  scales: {
+                    ...baseChartOptions.scales,
+                    x: {
+                      ...baseChartOptions.scales.x,
+                      ticks: {
+                        autoSkip: false, // Ensure all ticks are displayed
+                      },
+                    },
+                  },
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="p-4 sm:p-6">
+          {/* ... existing content rendering ... */}
+        </div>
+      )}
     </div>
   );
 }
