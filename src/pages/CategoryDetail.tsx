@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { useParams, Link } from 'react-router-dom';
 import { Line, Bar, Pie } from 'react-chartjs-2';
-import { ChevronLeft, Search } from 'lucide-react';
+import { ChevronLeft, Search, ArrowUpIcon, ArrowDownIcon, MinusIcon } from 'lucide-react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,9 +34,40 @@ ChartJS.register(
   annotationPlugin
 );
 
-// Define a constant for the API base URL directly
 const API_BASE_URL = 'https://dashboard-backend-8spg.onrender.com/api'; // Change this URL as needed
 
+// Add these type definitions after the imports
+type Card = {
+  title: string;
+  value: string;
+  unit: string;
+  description: string;
+  trend: 'up' | 'down' | 'neutral';
+};
+
+type ChartConfig = {
+  chartType: 'line' | 'bar' | 'pie';
+  title: string;
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+    borderColor: string;
+    borderWidth: number;
+  }[];
+  options: any;
+};
+
+type DisplayConfig = {
+  displayType: 'chart' | 'cards';
+  chartConfig?: ChartConfig;
+  cards?: Card[];
+};
+
+type GeneratedResponse = {
+  displayConfig: DisplayConfig;
+};
 
 export function CategoryDetail() {
   const { categoryName } = useParams<{ categoryName: string }>();
@@ -98,7 +129,7 @@ export function CategoryDetail() {
     scales: {
       y: {
         beginAtZero: true,
-        min: 0, // Default minimum value
+        min: 0,
       },
     },
   });
@@ -182,7 +213,7 @@ export function CategoryDetail() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGeneratedGraph, setShowGeneratedGraph] = useState(false);
-  const [generatedData, setGeneratedData] = useState<any>(null);
+  const [generatedData, setGeneratedData] = useState<GeneratedResponse | null>(null);
   const chartRef = useRef(null); // Create a ref for the chart
 
   useEffect(() => {
@@ -917,10 +948,72 @@ export function CategoryDetail() {
         body: JSON.stringify({ prompt: searchQuery }),
       });
       
+      if (!response.ok) {
+        // If the server responds with an error, show a "not relevant" card
+        const notRelevantData: GeneratedResponse = {
+          displayConfig: {
+            displayType: 'cards',
+            cards: [{
+              title: 'Not Relevant Query',
+              value: 'N/A',
+              unit: '',
+              description: 'The search query is not related to available data. Please try a different search term.',
+              trend: 'neutral'
+            }]
+          }
+        };
+        setGeneratedData(notRelevantData);
+        return;
+      }
+
       const data = await response.json();
-      setGeneratedData(data);
+      console.log('Raw response:', data);
+      
+      // If the response is empty or invalid, show a "not relevant" card
+      if (!data || !data.displayConfig || !data.displayConfig.displayType) {
+        const notRelevantData: GeneratedResponse = {
+          displayConfig: {
+            displayType: 'cards',
+            cards: [{
+              title: 'Not Relevant Query',
+              value: 'N/A',
+              unit: '',
+              description: 'The search query is not related to available energy monitoring data. Please try a different search term.',
+              trend: 'neutral'
+            }]
+          }
+        };
+        setGeneratedData(notRelevantData);
+        return;
+      }
+
+      // If we have valid data, format and use it
+      const formattedData: GeneratedResponse = {
+        displayConfig: {
+          displayType: data.displayConfig.displayType,
+          ...(data.displayConfig.cards && { cards: data.displayConfig.cards }),
+          ...(data.displayConfig.chartConfig && { chartConfig: data.displayConfig.chartConfig })
+        }
+      };
+
+      console.log('Formatted data:', formattedData);
+      setGeneratedData(formattedData);
     } catch (error) {
       console.error('Error generating response:', error);
+      // In case of any error, show a "not relevant" card
+      const notRelevantData: GeneratedResponse = {
+        displayConfig: {
+          displayType: 'cards',
+          cards: [{
+            title: 'Error Processing Query',
+            value: 'Error',
+            unit: '',
+            description: 'An error occurred while processing your search query. Please try again.',
+            trend: 'neutral'
+          }]
+        }
+      };
+      setGeneratedData(notRelevantData);
     } finally {
       setIsGenerating(false);
     }
@@ -934,6 +1027,40 @@ export function CategoryDetail() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    console.log('Generated Data State:', generatedData);
+  }, [generatedData]);
+
+  // Add this component for displaying cards
+  const MetricCard = ({ title, value, unit, description, trend }: Card) => {
+    console.log('Rendering MetricCard:', { title, value, unit, description, trend }); // Debug log
+    
+    const getTrendIcon = () => {
+      switch (trend) {
+        case 'up':
+          return <ArrowUpIcon className="h-4 w-4 text-green-500" />;
+        case 'down':
+          return <ArrowDownIcon className="h-4 w-4 text-red-500" />;
+        default:
+          return <MinusIcon className="h-4 w-4 text-gray-500" />;
+      }
+    };
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
+        <div className="mt-2 flex items-baseline">
+          <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+            {value}
+            {unit && <span className="ml-1 text-sm font-medium text-gray-500">{unit}</span>}
+          </p>
+          <div className="ml-2">{getTrendIcon()}</div>
+        </div>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -1241,16 +1368,17 @@ export function CategoryDetail() {
       </div>
 
       {/* Conditional rendering for generated graph */}
-      {showGeneratedGraph ? (
+      {showGeneratedGraph && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-base font-medium text-gray-900 dark:text-white">
-              Generated Graph
+              Generated Content
             </h2>
             <button
               onClick={() => {
                 setShowGeneratedGraph(false);
-                setSearchQuery(''); // Reset search query when going back
+                setSearchQuery('');
+                setGeneratedData(null);
               }}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             >
@@ -1259,58 +1387,57 @@ export function CategoryDetail() {
           </div>
           {isGenerating ? (
             <LoadingSpinner />
-          ) : generatedData ? (
-            <div className="h-[500px] overflow-x-auto">
-              <Line
-                ref={chartRef}
-                data={{
-                  labels: Array.isArray(generatedData.plotData)
-                    ? generatedData.plotData.map((item: any) => format(parseISO(item.date), 'dd MMM yy'))
-                    : [format(parseISO(generatedData.plotData.date), 'dd MMM yy')],
-                  datasets: [
-                    {
-                      label: 'Consumption',
-                      data: Array.isArray(generatedData.plotData)
-                        ? generatedData.plotData.map((item: any) => item.sum_of_consumtion)
-                        : [generatedData.plotData.sum_of_consumtion],
-                      borderColor: '#2196F3',
-                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                      tension: 0.4,
-                    },
-                    {
-                      label: 'Molten Metal',
-                      data: Array.isArray(generatedData.plotData)
-                        ? generatedData.plotData.map((item: any) => item.sum_of_moltenmetal)
-                        : [generatedData.plotData.sum_of_moltenmetal],
-                      borderColor: '#FF9800',
-                      backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                      tension: 0.4,
-                    }
-                  ]
-                }}
-                options={{
-                  ...baseChartOptions,
-                  scales: {
-                    ...baseChartOptions.scales,
-                    x: {
-                      ...baseChartOptions.scales.x,
-                      ticks: {
-                        autoSkip: false, // Ensure all ticks are displayed
-                      },
-                    },
-                  },
-                }}
-              />
-            </div>
+          ) : generatedData && generatedData.displayConfig ? (
+            <>
+              {generatedData.displayConfig.displayType === 'cards' && generatedData.displayConfig.cards ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {generatedData.displayConfig.cards.map((card: Card, index: number) => (
+                    <MetricCard 
+                      key={index}
+                      title={card.title}
+                      value={card.value}
+                      unit={card.unit}
+                      description={card.description}
+                      trend={card.trend}
+                    />
+                  ))}
+                </div>
+              ) : generatedData.displayConfig.displayType === 'chart' && generatedData.displayConfig.chartConfig ? (
+                <div className="h-[500px] overflow-x-auto">
+                  <Line
+                    ref={chartRef}
+                    data={{
+                      labels: generatedData.displayConfig.chartConfig.labels || [],
+                      datasets: generatedData.displayConfig.chartConfig.datasets || []
+                    }}
+                    options={{
+                      ...baseChartOptions,
+                      ...generatedData.displayConfig.chartConfig.options,
+                      plugins: {
+                        ...baseChartOptions.plugins,
+                        title: {
+                          display: true,
+                          text: generatedData.displayConfig.chartConfig.title || '',
+                          font: {
+                            size: 16,
+                            weight: 'bold'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  Invalid display type: {generatedData.displayConfig.displayType}
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center text-gray-500 dark:text-gray-400">
-              No relevant data available.
+              No data available. Try generating a response first.
             </div>
           )}
-        </div>
-      ) : (
-        <div className="p-4 sm:p-6">
-          {/* ... existing content rendering ... */}
         </div>
       )}
     </div>
